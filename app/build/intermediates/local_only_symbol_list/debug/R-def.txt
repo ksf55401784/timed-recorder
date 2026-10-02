@@ -9,12 +9,15 @@ color teal_200
 color white
 drawable ic_mic
 id addBtn
+id battBtn
 id dlgDur
 id dlgEnable
 id dlgLabel
 id dlgRepeat
 id dlgTime
 id listView
+id statusText
+id testBtn
 layout activity_main
 layout dialog_schedule
 string app_name

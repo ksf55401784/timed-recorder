@@ -1,9 +1,12 @@
 package com.example.recorder;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ArrayAdapter;
@@ -12,6 +15,7 @@ import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.Switch;
+import android.widget.TextView;
 import android.widget.TimePicker;
 import android.widget.Toast;
 
@@ -20,8 +24,12 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * 主界面：管理多组定时录音。
@@ -40,6 +48,7 @@ public class MainActivity extends AppCompatActivity {
     private ArrayAdapter<String> adapter;
     private List<String> display;
     private List<Schedule> schedules;
+    private TextView statusText;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,7 +69,14 @@ public class MainActivity extends AppCompatActivity {
             if (!schedules.isEmpty()) openEditor(schedules.get(position));
         });
 
+        statusText = findViewById(R.id.statusText);
+        Button testBtn = findViewById(R.id.testBtn);
+        Button battBtn = findViewById(R.id.battBtn);
+        testBtn.setOnClickListener(v -> startTestRecord());
+        battBtn.setOnClickListener(v -> openBatterySettings());
+
         requestPerms();
+        updateStatus();
     }
 
     private void refreshList() {
@@ -74,6 +90,66 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         adapter.notifyDataSetChanged();
+        updateStatus();
+    }
+
+    /** 显示下次触发时间 / 电池优化状态，确认定时确实登记成功 */
+    private void updateStatus() {
+        if (statusText == null) return;
+        StringBuilder sb = new StringBuilder();
+        long now = System.currentTimeMillis();
+        long earliest = Long.MAX_VALUE;
+        int enabled = 0;
+        for (Schedule s : schedules) {
+            if (!s.enabled) continue;
+            enabled++;
+            long t = ScheduleManager.nextTrigger(now, s.hour, s.minute, s.repeat);
+            if (t < earliest) earliest = t;
+        }
+        if (enabled > 0) {
+            String when = new SimpleDateFormat("MM-dd HH:mm", Locale.US).format(new Date(earliest));
+            sb.append("已启用 ").append(enabled).append(" 个定时，最近一次将在 ").append(when).append(" 自动录音。\n");
+        } else {
+            sb.append("当前没有已启用的定时。\n");
+        }
+        // 电池优化状态
+        boolean ignored = true;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            android.os.PowerManager pm = (android.os.PowerManager) getSystemService(POWER_SERVICE);
+            ignored = pm.isIgnoringBatteryOptimizations(getPackageName());
+        }
+        if (ignored) {
+            sb.append("✅ 电池优化已忽略（闹钟不会被系统杀掉）。");
+        } else {
+            sb.append("⚠️ 电池优化未关闭：点「忽略电池优化」并允许，否则闹钟可能不响！");
+        }
+        statusText.setText(sb.toString());
+    }
+
+    /** 立即录音 1 分钟做测试，验证麦克风与保存链路 */
+    private void startTestRecord() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                != PackageManager.PERMISSION_GRANTED) {
+            Toast.makeText(this, "请先授予麦克风权限", Toast.LENGTH_LONG).show();
+            requestPerms();
+            return;
+        }
+        Intent svc = new Intent(this, RecorderService.class);
+        svc.setAction(RecorderService.ACTION_START);
+        svc.putExtra(RecorderService.EXTRA_DURATION, 1); // 测试录 1 分钟
+        startForegroundService(svc);
+        Toast.makeText(this, "已开始测试录音（约1分钟，结束后通知）", Toast.LENGTH_LONG).show();
+    }
+
+    /** 跳到系统设置，关闭对本 App 的电池优化（国产机闹钟不响的头号原因） */
+    private void openBatterySettings() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            Intent i = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+            i.setData(Uri.parse("package:" + getPackageName()));
+            startActivity(i);
+        } else {
+            Toast.makeText(this, "当前系统无需此设置", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private String summary(Schedule s) {

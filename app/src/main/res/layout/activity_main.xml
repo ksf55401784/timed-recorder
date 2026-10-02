@@ -34,18 +34,51 @@
         android:layout_marginTop="8dp"
         android:layout_weight="1" />
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/testBtn"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:layout_weight="1"
+            android:backgroundTint="#34a853"
+            android:text="🎤 立即录音(测试)" />
+
+        <Button
+            android:id="@+id/battBtn"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:backgroundTint="#f4b400"
+            android:text="🔋 忽略电池优化" />
+    </LinearLayout>
+
     <Button
         android:id="@+id/addBtn"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
+        android:layout_marginTop="8dp"
         android:backgroundTint="#4f8cff"
         android:text="＋ 新增定时" />
 
     <TextView
+        android:id="@+id/statusText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
+        android:layout_marginTop="10dp"
+        android:lineSpacingExtra="4dp"
+        android:textColor="#ccc"
+        android:textSize="12sp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
         android:lineSpacingExtra="4dp"
         android:text="说明：录音文件保存在 内部存储/Android/data/com.example.recorder/files/recordings/ 。支持每天 / 工作日 / 周末 三种重复；重启手机会自动恢复全部已启用的定时。首次请授予麦克风与通知权限。"
         android:textColor="#888"

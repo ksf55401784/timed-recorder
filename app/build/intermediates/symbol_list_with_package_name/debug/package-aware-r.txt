@@ -3070,6 +3070,7 @@ id autoCompleteToEnd
 id autoCompleteToStart
 id barrier
 id baseline
+id battBtn
 id beginOnFirstDraw
 id beginning
 id blocking
@@ -3373,6 +3374,7 @@ id startToEnd
 id startVertical
 id staticLayout
 id staticPostLayout
+id statusText
 id stop
 id stretch
 id submenuarrow
@@ -3391,6 +3393,7 @@ id tag_transition_group
 id tag_unhandled_key_event_manager
 id tag_unhandled_key_listeners
 id tag_window_insets_animation_callback
+id testBtn
 id text
 id text2
 id textEnd

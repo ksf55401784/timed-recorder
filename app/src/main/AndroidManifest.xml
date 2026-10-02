@@ -12,6 +12,8 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- 保持 CPU 唤醒以完成录音 -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- 请求忽略电池优化（避免国产机杀掉闹钟） -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <application
         android:allowBackup="true"
