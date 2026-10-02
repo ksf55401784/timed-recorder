@@ -3073,6 +3073,7 @@ id baseline
 id battBtn
 id beginOnFirstDraw
 id beginning
+id bgBtn
 id blocking
 id bottom
 id bounce

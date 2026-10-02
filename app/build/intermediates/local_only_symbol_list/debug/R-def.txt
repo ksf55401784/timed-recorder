@@ -10,6 +10,7 @@ color white
 drawable ic_mic
 id addBtn
 id battBtn
+id bgBtn
 id dlgDur
 id dlgEnable
 id dlgLabel

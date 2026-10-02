@@ -67,6 +67,14 @@
         android:text="🔐 去开启权限（麦克风/通知）" />
 
     <Button
+        android:id="@+id/bgBtn"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:backgroundTint="#ff5722"
+        android:text="🛡 荣耀后台白名单（锁屏必录关键）" />
+
+    <Button
         android:id="@+id/addBtn"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

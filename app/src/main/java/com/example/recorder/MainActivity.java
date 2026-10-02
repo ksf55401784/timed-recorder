@@ -74,9 +74,11 @@ public class MainActivity extends AppCompatActivity {
         Button testBtn = findViewById(R.id.testBtn);
         Button battBtn = findViewById(R.id.battBtn);
         Button permBtn = findViewById(R.id.permBtn);
+        Button bgBtn = findViewById(R.id.bgBtn);
         testBtn.setOnClickListener(v -> startTestRecord());
         battBtn.setOnClickListener(v -> openBatterySettings());
         permBtn.setOnClickListener(v -> openAppSettings());
+        bgBtn.setOnClickListener(v -> openBgSettings());
 
         // 接收录音服务回传的实时状态（开始/失败原因/完成）
         statusReceiver = new BroadcastReceiver() {
@@ -160,6 +162,7 @@ public class MainActivity extends AppCompatActivity {
         } else {
             sb.append("⚠️ 电池优化未关闭：点「忽略电池优化」并允许，否则闹钟可能不响！");
         }
+        sb.append("\n🛡 荣耀/华为：还要 设置→电池→应用启动管理→定时录音→关闭「自动管理」→开「自启动/后台活动」，否则锁屏不录（点下方橙色按钮直达）。");
         // 仅在尚未显示录音结果时刷新（避免覆盖 STARTED/DONE 提示）
         if (statusText.getText() == null || statusText.getText().toString().startsWith("已启用")
                 || statusText.getText().toString().startsWith("当前没有")) {
@@ -206,6 +209,16 @@ public class MainActivity extends AppCompatActivity {
         i.setData(Uri.parse("package:" + getPackageName()));
         startActivity(i);
         Toast.makeText(this, "请在设置→权限→麦克风→选择「允许」", Toast.LENGTH_LONG).show();
+    }
+
+    /** 跳到本应用设置页并提示关闭荣耀「应用启动管理」自动管理（锁屏定时能录的关键） */
+    private void openBgSettings() {
+        Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+        i.setData(Uri.parse("package:" + getPackageName()));
+        startActivity(i);
+        Toast.makeText(this,
+                "荣耀必做：设置→电池→应用启动管理→定时录音→关闭「自动管理」→打开「允许自启动 / 允许后台活动 / 允许关联启动」",
+                Toast.LENGTH_LONG).show();
     }
 
     @Override
