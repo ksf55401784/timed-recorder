@@ -1,0 +1,14 @@
+[
+    {
+        "merged": "com.example.recorder.app-merged_res-31:/drawable_ic_mic.xml.flat",
+        "source": "com.example.recorder.app-main-33:/drawable/ic_mic.xml"
+    },
+    {
+        "merged": "com.example.recorder.app-merged_res-31:/layout_activity_main.xml.flat",
+        "source": "com.example.recorder.app-main-33:/layout/activity_main.xml"
+    },
+    {
+        "merged": "com.example.recorder.app-merged_res-31:/layout_dialog_schedule.xml.flat",
+        "source": "com.example.recorder.app-main-33:/layout/dialog_schedule.xml"
+    }
+]

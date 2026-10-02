@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bg">#0f1220</color>
+    <color name="black">#FF000000</color>
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="white">#FFFFFFFF</color>
+    <string name="app_name">定时录音</string>
+    <style name="Theme.Recorder" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/purple_500</item>
+        <item name="colorPrimaryDark">@color/bg</item>
+        <item name="colorAccent">@color/teal_200</item>
+        <item name="android:windowBackground">@color/bg</item>
+        <item name="android:textColor">@color/white</item>
+    </style>
+</resources>
