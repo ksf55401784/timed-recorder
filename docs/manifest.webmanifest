@@ -1,0 +1,19 @@
+{
+  "name": "定时录音",
+  "short_name": "定时录音",
+  "description": "在手机上设置定时麦克风录音，支持每天/单次/间隔，录音本地保存可回放下载。",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f1220",
+  "theme_color": "#0f1220",
+  "icons": [
+    {
+      "src": "./app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

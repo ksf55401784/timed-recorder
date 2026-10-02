@@ -1,0 +1,2 @@
+// 根构建脚本：插件版本与仓库已在 settings.gradle 中统一声明，
+// 此处无需重复配置 buildscript classpath，避免与 pluginManagement 冲突。

@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<title>定时录音</title>
+<link rel="manifest" href="./manifest.webmanifest" />
+<link rel="icon" href="./app-icon.svg" type="image/svg+xml" />
+<style>
+  :root { --bg:#0f1220; --card:#1b2138; --line:#2a3252; --txt:#e8ecf6; --sub:#9aa6c4; --accent:#4f8cff; --ok:#36c08b; --warn:#ffb454; --danger:#ff6b6b; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif; background:var(--bg); color:var(--txt); padding:max(16px,env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom)); }
+  h1 { font-size:22px; margin:6px 0 2px; }
+  .sub { color:var(--sub); font-size:13px; margin-bottom:16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px; margin-bottom:14px; }
+  .card h2 { font-size:15px; margin:0 0 12px; color:#cfd8ee; font-weight:600; }
+  label { display:block; font-size:13px; color:var(--sub); margin:10px 0 6px; }
+  input, select { width:100%; padding:12px; background:#0e1322; border:1px solid var(--line); border-radius:10px; color:var(--txt); font-size:15px; }
+  input[type=time], input[type=datetime-local] { color-scheme:dark; }
+  .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .seg { display:flex; gap:8px; }
+  .seg button { flex:1; padding:10px; border:1px solid var(--line); background:#0e1322; color:var(--sub); border-radius:10px; font-size:14px; }
+  .seg button.on { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .btn { width:100%; padding:14px; border:none; border-radius:12px; font-size:16px; font-weight:600; margin-top:6px; }
+  .btn-primary { background:var(--accent); color:#fff; }
+  .btn-ghost { background:#0e1322; color:var(--txt); border:1px solid var(--line); }
+  .btn-danger { background:var(--danger); color:#fff; }
+  .switchrow { display:flex; justify-content:space-between; align-items:center; }
+  .switch { position:relative; width:50px; height:30px; }
+  .switch input { display:none; }
+  .slider { position:absolute; inset:0; background:#33405f; border-radius:30px; transition:.2s; }
+  .slider:before { content:""; position:absolute; width:24px; height:24px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s; }
+  .switch input:checked + .slider { background:var(--ok); }
+  .switch input:checked + .slider:before { transform:translateX(20px); }
+  .rec-item { border:1px solid var(--line); border-radius:12px; padding:12px; margin-top:10px; }
+  .rec-item .meta { font-size:12px; color:var(--sub); margin-bottom:8px; word-break:break-all; }
+  .rec-item audio { width:100%; margin-bottom:8px; }
+  .rec-actions { display:flex; gap:8px; }
+  .rec-actions a, .rec-actions button { flex:1; text-align:center; padding:9px; border-radius:9px; font-size:13px; text-decoration:none; border:1px solid var(--line); background:#0e1322; color:var(--txt); }
+  .rec-actions .del { color:var(--danger); border-color:#5a2a2a; }
+  .hint { font-size:12px; color:var(--sub); line-height:1.5; margin-top:10px; }
+  .banner { background:#3a2a12; border:1px solid #6b4b18; color:var(--warn); padding:10px 12px; border-radius:10px; font-size:13px; margin-bottom:14px; display:none; }
+  #log { font-size:12px; color:var(--sub); max-height:140px; overflow:auto; line-height:1.6; }
+  #log div { padding:2px 0; border-bottom:1px dashed #232b46; }
+  .dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; vertical-align:middle; }
+  .dot.ok{background:var(--ok);} .dot.warn{background:var(--warn);} .dot.err{background:var(--danger);} .dot.run{background:var(--accent);}
+  .recording { color:var(--danger); font-weight:600; }
+  .pill { display:inline-block; padding:3px 10px; border-radius:20px; font-size:12px; background:#0e1322; border:1px solid var(--line); color:var(--sub); }
+</style>
+</head>
+<body>
+  <h1>🎙️ 定时录音</h1>
+  <div class="sub">手机端麦克风定时录音 · 本地保存 · 可添加到主屏幕</div>
+
+  <div class="banner" id="secureBanner">⚠️ 当前不是安全连接（HTTPS/localhost），浏览器不允许访问麦克风。请通过 HTTPS 或本机 localhost 打开本应用。</div>
+
+  <div class="card">
+    <h2>麦克风权限</h2>
+    <div class="row">
+      <span class="pill" id="permPill">未授权</span>
+      <button class="btn-ghost btn" style="width:auto;padding:12px 18px;margin:0" id="permBtn">授权麦克风</button>
+    </div>
+    <div class="hint">录音需要麦克风权限。首次使用请点「授权麦克风」并允许。</div>
+  </div>
+
+  <div class="card">
+    <h2>立即录音（验证用）</h2>
+    <div class="row">
+      <input type="number" id="nowSec" value="10" min="1" max="600" style="max-width:110px" />
+      <span class="sub">秒</span>
+      <button class="btn-primary btn" style="flex:1;margin:0" id="nowBtn">立即录一段</button>
+    </div>
+    <div class="hint">点此马上录一段，确认手机麦克风与保存链路可用（正好验证之前自动化做不到的部分）。</div>
+  </div>
+
+  <div class="card">
+    <h2>定时设置</h2>
+    <label>模式</label>
+    <div class="seg" id="modeSeg">
+      <button data-mode="daily" class="on">每天</button>
+      <button data-mode="once">单次</button>
+      <button data-mode="interval">间隔</button>
+    </div>
+
+    <div id="dailyBox">
+      <label>每天触发时间</label>
+      <input type="time" id="dailyTime" value="09:00" />
+    </div>
+    <div id="onceBox" style="display:none">
+      <label>单次触发日期时间</label>
+      <input type="datetime-local" id="onceTime" />
+    </div>
+    <div id="intervalBox" style="display:none">
+      <label>每隔多少分钟</label>
+      <input type="number" id="intervalMin" value="60" min="1" max="10080" />
+    </div>
+
+    <label>录音时长（分钟）</label>
+    <input type="number" id="durMin" value="5" min="1" max="120" />
+
+    <div class="switchrow" style="margin-top:16px">
+      <span>启用定时</span>
+      <label class="switch"><input type="checkbox" id="enabled" /><span class="slider"></span></label>
+    </div>
+    <div class="hint">开启后，应用在前台/后台保活期间会按设定准点开始录音。注意：移动端浏览器在应用被系统回收后定时器不会运行——要做到锁屏也准点录，需要原生 App（见底部说明）。</div>
+  </div>
+
+  <div class="card">
+    <h2>录音列表</h2>
+    <div id="recList"><div class="hint">还没有录音。</div></div>
+  </div>
+
+  <div class="card">
+    <h2>状态 / 日志</h2>
+    <div id="log"></div>
+  </div>
+
+  <div class="card">
+    <h2>关于后台定时的限制</h2>
+    <div class="hint">
+      • <b>本 Web App</b>：在应用保持打开/后台保活时可准点录音；锁屏或被杀后不会触发。<br/>
+      • <b>Android 原生</b>：用前台服务 + AlarmManager/WorkManager 可实现锁屏准点录音（需要我可另出 Android 工程）。<br/>
+      • <b>iOS</b>：系统不允许任意定时录音，仅能在 App 前台录音。<br/>
+      若你需要真正可靠的「锁屏也录」，告诉我目标平台，我给你做原生方案。
+    </div>
+  </div>
+
+<script>
+(function(){
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const isSecure = window.isSecureContext;
+  if (!isSecure) $('secureBanner').style.display = 'block';
+
+  // ---------- 日志 ----------
+  function log(msg, type){
+    const d = $('log');
+    const el = document.createElement('div');
+    const t = {ok:'ok',warn:'warn',err:'err',run:'run'}[type||'run'] || 'run';
+    el.innerHTML = '<span class="dot '+t+'"></span>' + new Date().toLocaleTimeString() + ' · ' + msg;
+    d.prepend(el);
+  }
+
+  // ---------- 权限 ----------
+  async function checkPerm(){
+    try {
+      const s = await navigator.permissions.query({name:'microphone'});
+      return s.state;
+    } catch(e){ return 'unknown'; }
+  }
+  async function refreshPerm(){
+    const st = await checkPerm();
+    $('permPill').textContent = {granted:'已授权', denied:'被拒绝', prompt:'未授权', unknown:'未知'}[st] || '未授权';
+    $('permPill').style.color = st==='granted' ? 'var(--ok)' : 'var(--warn)';
+  }
+  $('permBtn').onclick = async () => {
+    try {
+      const s = await navigator.mediaDevices.getUserMedia({audio:true});
+      s.getTracks().forEach(t=>t.stop());
+      log('麦克风授权成功', 'ok');
+      await refreshPerm();
+    } catch(e){
+      log('授权失败：' + e.message, 'err');
+    }
+  };
+
+  // ---------- IndexedDB ----------
+  const DB='recorder_db', STORE='recs';
+  function openDB(){
+    return new Promise((res,rej)=>{
+      const r = indexedDB.open(DB,1);
+      r.onupgradeneeded = e => e.target.result.createObjectStore(STORE,{keyPath:'id'});
+      r.onsuccess = e => res(e.target.result);
+      r.onerror = e => rej(e.target.error);
+    });
+  }
+  async function saveRec(rec){
+    const db = await openDB();
+    return new Promise((res,rej)=>{ const tx=db.transaction(STORE,'readwrite'); tx.objectStore(STORE).put(rec); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); });
+  }
+  async function allRecs(){
+    const db = await openDB();
+    return new Promise((res,rej)=>{ const tx=db.transaction(STORE,'readonly'); const q=tx.objectStore(STORE).getAll(); q.onsuccess=()=>res((q.result||[]).sort((a,b)=>b.id-a.id)); q.onerror=()=>rej(q.error); });
+  }
+  async function delRec(id){
+    const db = await openDB();
+    return new Promise((res,rej)=>{ const tx=db.transaction(STORE,'readwrite'); tx.objectStore(STORE).delete(id); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); });
+  }
+
+  // ---------- 录音引擎 ----------
+  let recording = false;
+  function pickMime(){
+    const c = ['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/mp4'];
+    for (const m of c) if (window.MediaRecorder && MediaRecorder.isTypeSupported(m)) return m;
+    return '';
+  }
+  async function startRecording(durationSec, label){
+    if (recording){ log('已有录音进行中，跳过：'+label, 'warn'); return; }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ log('当前环境不支持麦克风采集', 'err'); return; }
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    } catch(e){ log('无法打开麦克风：'+e.message, 'err'); return; }
+    recording = true;
+    const mime = pickMime();
+    let mr;
+    try { mr = mime ? new MediaRecorder(stream,{mimeType:mime}) : new MediaRecorder(stream); }
+    catch(e){ log('MediaRecorder 初始化失败：'+e.message,'err'); stream.getTracks().forEach(t=>t.stop()); recording=false; return; }
+    const chunks = [];
+    mr.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+    mr.onstop = async () => {
+      recording = false;
+      stream.getTracks().forEach(t=>t.stop());
+      const blob = new Blob(chunks, {type: mime || 'audio/webm'});
+      const ext = (mime||'').includes('mp4') ? 'mp4' : ((mime||'').includes('ogg') ? 'ogg' : 'webm');
+      const rec = { id: Date.now(), blob, type: blob.type, duration: durationSec, label, date: new Date().toISOString(), ext };
+      await saveRec(rec);
+      log('录音完成并保存：'+label+' ('+fmtDur(durationSec)+', '+Math.round(blob.size/1024)+'KB)', 'ok');
+      notify('录音完成', label + ' 已保存');
+      renderList();
+    };
+    mr.start();
+    log('开始录音：'+label+'，时长 '+fmtDur(durationSec), 'run');
+    notify('开始录音', label);
+    $('nowBtn').classList.add('recording'); $('nowBtn').textContent = '录音中…';
+    setTimeout(() => { if (mr.state !== 'inactive') mr.stop(); $('nowBtn').classList.remove('recording'); $('nowBtn').textContent = '立即录一段'; }, durationSec*1000);
+  }
+  function fmtDur(s){ const m=Math.floor(s/60), ss=s%60; return m? (m+'分'+ss+'秒') : (ss+'秒'); }
+
+  $('nowBtn').onclick = () => {
+    const sec = Math.max(1, Math.min(600, parseInt($('nowSec').value||'10',10)));
+    startRecording(sec, '手动验证录音');
+  };
+
+  // ---------- 渲染列表 ----------
+  function renderList(){
+    allRecs().then(recs => {
+      const box = $('recList');
+      if (!recs.length){ box.innerHTML = '<div class="hint">还没有录音。</div>'; return; }
+      box.innerHTML = '';
+      recs.forEach(r => {
+        const url = URL.createObjectURL(r.blob);
+        const item = document.createElement('div');
+        item.className = 'rec-item';
+        const d = new Date(r.date);
+        item.innerHTML =
+          '<div class="meta">'+ d.toLocaleString() + ' · ' + r.label + ' · ' + fmtDur(r.duration) + ' · ' + Math.round(r.blob.size/1024) + 'KB</div>' +
+          '<audio controls src="'+url+'"></audio>' +
+          '<div class="rec-actions">' +
+            '<a href="'+url+'" download="record_'+r.id+'.'+r.ext+'">下载</a>' +
+            '<button class="del">删除</button>' +
+          '</div>';
+        item.querySelector('.del').onclick = async () => { await delRec(r.id); URL.revokeObjectURL(url); renderList(); log('已删除一条录音', 'warn'); };
+        box.appendChild(item);
+      });
+    }).catch(e => log('读取录音列表失败：'+e.message,'err'));
+  }
+
+  // ---------- 通知 ----------
+  function notify(title, body){
+    try {
+      if ('Notification' in window && Notification.permission === 'granted'){
+        new Notification(title, {body});
+      }
+    } catch(e){}
+  }
+  if ('Notification' in window && Notification.permission === 'default'){
+    Notification.requestPermission().then(()=>log('通知权限：'+Notification.permission,'ok'));
+  }
+
+  // ---------- 设置持久化 ----------
+  const SET='rec_settings';
+  function loadSettings(){
+    try { return JSON.parse(localStorage.getItem(SET)) || {}; } catch(e){ return {}; }
+  }
+  function saveSettings(s){ localStorage.setItem(SET, JSON.stringify(s)); }
+  function applySettingsToUI(s){
+    if (s.mode) setMode(s.mode);
+    if (s.dailyTime) $('dailyTime').value = s.dailyTime;
+    if (s.onceTime) $('onceTime').value = s.onceTime;
+    if (s.intervalMin) $('intervalMin').value = s.intervalMin;
+    if (s.durMin) $('durMin').value = s.durMin;
+    $('enabled').checked = !!s.enabled;
+  }
+  function collectSettings(){
+    return {
+      mode: document.querySelector('#modeSeg button.on').dataset.mode,
+      dailyTime: $('dailyTime').value,
+      onceTime: $('onceTime').value,
+      intervalMin: parseInt($('intervalMin').value||'60',10),
+      durMin: parseInt($('durMin').value||'5',10),
+      enabled: $('enabled').checked
+    };
+  }
+  function setMode(m){
+    document.querySelectorAll('#modeSeg button').forEach(b=>b.classList.toggle('on', b.dataset.mode===m));
+    $('dailyBox').style.display = m==='daily'?'block':'none';
+    $('onceBox').style.display = m==='once'?'block':'none';
+    $('intervalBox').style.display = m==='interval'?'block':'none';
+  }
+  document.querySelectorAll('#modeSeg button').forEach(b => b.onclick = () => { setMode(b.dataset.mode); saveSettings(collectSettings()); });
+  ['dailyTime','onceTime','intervalMin','durMin'].forEach(id => $(id).onchange = () => saveSettings(collectSettings()));
+  $('enabled').onchange = () => { saveSettings(collectSettings()); log('定时' + ($('enabled').checked?'已启用':'已停用'), 'ok'); };
+
+  // ---------- 定时调度（前台保活期间） ----------
+  function doneKey(){ return 'done_' + new Date().toLocaleDateString(); }
+  function tick(){
+    const s = collectSettings();
+    if (!s.enabled) return;
+    const now = new Date();
+    const durSec = Math.max(1, Math.min(7200, s.durMin*60));
+    if (s.mode === 'daily'){
+      const [h,m] = (s.dailyTime||'09:00').split(':').map(Number);
+      if (now.getHours()===h && now.getMinutes()===m && !sessionStorage.getItem(doneKey())){
+        sessionStorage.setItem(doneKey(),'1');
+        log('定时触发（每天 '+s.dailyTime+'）', 'run');
+        startRecording(durSec, '每日定时录音');
+      }
+    } else if (s.mode === 'once'){
+      if (s.onceTime){
+        const t = new Date(s.onceTime);
+        if (now >= t && !s.onceDone){
+          s.onceDone = true; saveSettings(s);
+          log('定时触发（单次 '+s.onceTime+'）', 'run');
+          startRecording(durSec, '单次定时录音');
+        }
+      }
+    } else if (s.mode === 'interval'){
+      const last = s.lastRun ? new Date(s.lastRun) : null;
+      if (!last || (now - last) >= s.intervalMin*60000){
+        s.lastRun = now.toISOString(); saveSettings(s);
+        log('定时触发（间隔 '+s.intervalMin+' 分钟）', 'run');
+        startRecording(durSec, '间隔录音');
+      }
+    }
+  }
+  setInterval(tick, 1000);
+
+  // ---------- 初始化 ----------
+  applySettingsToUI(loadSettings());
+  renderList();
+  refreshPerm();
+  log('应用已就绪' + (isSecure?'':'（非安全连接，麦克风不可用）'), isSecure?'ok':'warn');
+  if ('serviceWorker' in navigator){ navigator.serviceWorker.register('./sw.js').catch(()=>{}); }
+})();
+</script>
+</body>
+</html>

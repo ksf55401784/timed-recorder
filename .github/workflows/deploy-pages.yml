@@ -1,0 +1,35 @@
+name: Deploy Web to GitHub Pages
+
+# 把 docs/ 下的网页版录音 App 部署到 GitHub Pages（公网 HTTPS），
+# 手机浏览器直接打开即可录音，无需安装。
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout 代码
+        uses: actions/checkout@v4
+
+      - name: 配置 Pages
+        uses: actions/configure-pages@v5
+
+      - name: 上传网页产物
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+      - name: 部署到 Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
