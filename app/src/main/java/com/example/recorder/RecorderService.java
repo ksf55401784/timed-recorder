@@ -22,11 +22,19 @@ import java.util.Locale;
 
 /**
  * 麦克风前台服务：被闹钟唤起后在后台/锁屏下录制指定时长，写到应用私有目录。
+ * 录制状态通过本地广播回报给主界面（含失败原因），便于用户排查。
  */
 public class RecorderService extends android.app.Service {
 
     public static final String ACTION_START = "com.example.recorder.action.START";
     public static final String EXTRA_DURATION = "duration_min";
+    public static final String EXTRA_SECONDS = "duration_sec";
+
+    // 状态广播：主界面接收后显示实时进度与失败原因
+    public static final String ACTION_STATUS = "com.example.recorder.ACTION_STATUS";
+    public static final String EXTRA_STATE = "state";   // STARTED / ERROR / DONE
+    public static final String EXTRA_MSG = "msg";
+
     private static final String CHANNEL = "rec_channel";
     private static final int NOTIF_ID = 1;
     private static final int NOTIF_DONE_ID = 2;
@@ -45,26 +53,35 @@ public class RecorderService extends android.app.Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         createChannel();
+        startForeground(NOTIF_ID, buildNotification("正在启动录音…"));
+
         int durMin = (intent != null) ? intent.getIntExtra(EXTRA_DURATION, 5) : 5;
-        if (durMin < 1) durMin = 1;
-        if (durMin > 120) durMin = 120;
-        startForeground(NOTIF_ID, buildNotification("正在录音…"));
+        int durSec = (intent != null) ? intent.getIntExtra(EXTRA_SECONDS, 0) : 0;
+        if (durMin < 0) durMin = 0;
+        if (durSec < 0) durSec = 0;
+        if (durSec > 59) durSec = 59;
+        long durMs = (long) durMin * 60 * 1000L + (long) durSec * 1000L;
+        if (durMs < 1000) durMs = 10000; // 最短 10 秒兜底
+
         acquireWakeLock();
 
         try {
             startRecording();
+            sendStatus("STARTED", "");
         } catch (Exception e) {
             Log.e("Recorder", "start failed", e);
-            notifyDone("录音失败", e.getMessage());
+            String reason = (e.getMessage() != null) ? e.getMessage() : e.getClass().getSimpleName();
+            sendStatus("ERROR", reason);
+            notifyDone("录音失败", reason);
             releaseWakeLock();
             stopForeground(true);
             stopSelf();
             return START_NOT_STICKY;
         }
 
-        final long durMs = (long) durMin * 60 * 1000;
-        stopTask = this::stopRecording;
-        handler.postDelayed(stopTask, durMs);
+        final long finalDur = durMs;
+        stopTask = () -> stopRecording();
+        handler.postDelayed(stopTask, finalDur);
         return START_NOT_STICKY;
     }
 
@@ -77,11 +94,10 @@ public class RecorderService extends android.app.Service {
         outFile = new File(dir, name);
 
         recorder = new MediaRecorder();
+        // 使用默认采样率/码率，避免部分机型（如荣耀）因硬编码参数而 start() 失败
         recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
         recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
         recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
-        recorder.setAudioSamplingRate(44100);
-        recorder.setAudioEncodingBitRate(192000);
         recorder.setOutputFile(outFile.getAbsolutePath());
         recorder.prepare();
         recorder.start();
@@ -100,11 +116,26 @@ public class RecorderService extends android.app.Service {
         recorder = null;
         releaseWakeLock();
 
-        if (outFile != null && outFile.exists()) {
-            notifyDone("录音完成", outFile.getName() + " · " + (outFile.length() / 1024) + " KB");
+        if (outFile != null && outFile.exists() && outFile.length() > 0) {
+            String info = outFile.getName() + " · " + (outFile.length() / 1024) + " KB";
+            sendStatus("DONE", info);
+            notifyDone("录音完成", info);
+        } else {
+            String why = (outFile == null) ? "未生成文件" :
+                    (!outFile.exists() ? "文件未生成" : "文件为空(0字节，可能是麦克风被系统拦截)");
+            sendStatus("ERROR", why);
+            notifyDone("录音异常", why);
         }
         stopForeground(true);
         stopSelf();
+    }
+
+    private void sendStatus(String state, String msg) {
+        Intent i = new Intent(ACTION_STATUS);
+        i.setPackage(getPackageName());
+        i.putExtra(EXTRA_STATE, state);
+        i.putExtra(EXTRA_MSG, msg == null ? "" : msg);
+        sendBroadcast(i);
     }
 
     private void createChannel() {

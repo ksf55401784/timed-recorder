@@ -16,6 +16,7 @@ id dlgLabel
 id dlgRepeat
 id dlgTime
 id listView
+id permBtn
 id statusText
 id testBtn
 layout activity_main

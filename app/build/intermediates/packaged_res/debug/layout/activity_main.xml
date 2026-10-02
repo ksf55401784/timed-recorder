@@ -59,6 +59,14 @@
     </LinearLayout>
 
     <Button
+        android:id="@+id/permBtn"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:backgroundTint="#9c27b0"
+        android:text="🔐 去开启权限（麦克风/通知）" />
+
+    <Button
         android:id="@+id/addBtn"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

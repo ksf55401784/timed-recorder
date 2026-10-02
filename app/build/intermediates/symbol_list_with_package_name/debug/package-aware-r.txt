@@ -3306,6 +3306,7 @@ id path
 id pathRelative
 id peekHeight
 id percent
+id permBtn
 id pin
 id position
 id postLayout

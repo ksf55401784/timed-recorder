@@ -1,7 +1,10 @@
 package com.example.recorder;
 
 import android.Manifest;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
@@ -32,10 +35,7 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * 主界面：管理多组定时录音。
- * - 列表展示全部定时（含启用状态、时间、重复、时长、备注）；
- * - 点击列表项编辑；点「新增定时」添加；
- * - 编辑对话框内可删除已有定时。
+ * 主界面：管理多组定时录音 + 立即录音测试 + 权限/电池优化引导。
  */
 public class MainActivity extends AppCompatActivity {
 
@@ -49,6 +49,7 @@ public class MainActivity extends AppCompatActivity {
     private List<String> display;
     private List<Schedule> schedules;
     private TextView statusText;
+    private BroadcastReceiver statusReceiver;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -72,11 +73,48 @@ public class MainActivity extends AppCompatActivity {
         statusText = findViewById(R.id.statusText);
         Button testBtn = findViewById(R.id.testBtn);
         Button battBtn = findViewById(R.id.battBtn);
+        Button permBtn = findViewById(R.id.permBtn);
         testBtn.setOnClickListener(v -> startTestRecord());
         battBtn.setOnClickListener(v -> openBatterySettings());
+        permBtn.setOnClickListener(v -> openAppSettings());
+
+        // 接收录音服务回传的实时状态（开始/失败原因/完成）
+        statusReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                String state = intent.getStringExtra(RecorderService.EXTRA_STATE);
+                String msg = intent.getStringExtra(RecorderService.EXTRA_MSG);
+                if ("STARTED".equals(state)) {
+                    setStatus("✅ 录音已开始（正在录音…结束后会通知）");
+                } else if ("DONE".equals(state)) {
+                    setStatus("✅ 录音完成：" + (msg == null ? "" : msg)
+                            + "\n文件在：内部存储/Android/data/com.example.recorder/files/recordings/");
+                } else if ("ERROR".equals(state)) {
+                    setStatus("❌ 录音失败：" + (msg == null ? "未知原因" : msg)
+                            + "\n请检查：① 设置→应用→定时录音→权限→麦克风→选「允许」；"
+                            + "② 荣耀手机还需在 设置→隐私→权限管理 里给麦克风；"
+                            + "③ 关闭「麦克风隐私保护/应用锁」。");
+                }
+            }
+        };
+        ContextCompat.registerReceiver(this, statusReceiver,
+                new IntentFilter(RecorderService.ACTION_STATUS),
+                ContextCompat.RECEIVER_NOT_EXPORTED);
 
         requestPerms();
         updateStatus();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (statusReceiver != null) {
+            try { unregisterReceiver(statusReceiver); } catch (Exception ignore) {}
+        }
+    }
+
+    private void setStatus(String s) {
+        if (statusText != null) statusText.setText(s);
     }
 
     private void refreshList() {
@@ -112,7 +150,6 @@ public class MainActivity extends AppCompatActivity {
         } else {
             sb.append("当前没有已启用的定时。\n");
         }
-        // 电池优化状态
         boolean ignored = true;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             android.os.PowerManager pm = (android.os.PowerManager) getSystemService(POWER_SERVICE);
@@ -123,22 +160,33 @@ public class MainActivity extends AppCompatActivity {
         } else {
             sb.append("⚠️ 电池优化未关闭：点「忽略电池优化」并允许，否则闹钟可能不响！");
         }
-        statusText.setText(sb.toString());
+        // 仅在尚未显示录音结果时刷新（避免覆盖 STARTED/DONE 提示）
+        if (statusText.getText() == null || statusText.getText().toString().startsWith("已启用")
+                || statusText.getText().toString().startsWith("当前没有")) {
+            statusText.setText(sb.toString());
+        }
     }
 
-    /** 立即录音 1 分钟做测试，验证麦克风与保存链路 */
+    /** 立即录音 10 秒做测试，验证麦克风与保存链路（时长短、反馈快） */
     private void startTestRecord() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
                 != PackageManager.PERMISSION_GRANTED) {
-            Toast.makeText(this, "请先授予麦克风权限", Toast.LENGTH_LONG).show();
-            requestPerms();
+            // 已被永久拒绝（荣耀常见：点了「禁止」或默认拒绝）→ 直接引导去系统设置
+            if (!ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.RECORD_AUDIO)) {
+                setStatus("⚠️ 麦克风权限未授予（且系统未弹出请求）。\n请点「去开启权限」按钮，在设置里把麦克风设为「允许」，然后回来再点测试。");
+                Toast.makeText(this, "请先去设置授予麦克风权限", Toast.LENGTH_LONG).show();
+            } else {
+                Toast.makeText(this, "正在请求麦克风权限…", Toast.LENGTH_SHORT).show();
+                requestPerms();
+            }
             return;
         }
         Intent svc = new Intent(this, RecorderService.class);
         svc.setAction(RecorderService.ACTION_START);
-        svc.putExtra(RecorderService.EXTRA_DURATION, 1); // 测试录 1 分钟
+        svc.putExtra(RecorderService.EXTRA_DURATION, 0);
+        svc.putExtra(RecorderService.EXTRA_SECONDS, 10); // 测试录 10 秒
         startForegroundService(svc);
-        Toast.makeText(this, "已开始测试录音（约1分钟，结束后通知）", Toast.LENGTH_LONG).show();
+        setStatus("⏳ 已发送录音请求，等待开始…（若数秒后无「✅ 录音已开始」提示，说明权限或麦克风被系统拦截）");
     }
 
     /** 跳到系统设置，关闭对本 App 的电池优化（国产机闹钟不响的头号原因） */
@@ -149,6 +197,30 @@ public class MainActivity extends AppCompatActivity {
             startActivity(i);
         } else {
             Toast.makeText(this, "当前系统无需此设置", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    /** 跳到本应用的系统设置页（用于手动开启麦克风等权限，荣耀机型必备） */
+    private void openAppSettings() {
+        Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+        i.setData(Uri.parse("package:" + getPackageName()));
+        startActivity(i);
+        Toast.makeText(this, "请在设置→权限→麦克风→选择「允许」", Toast.LENGTH_LONG).show();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQ_PERMS) {
+            boolean audioOk = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                    == PackageManager.PERMISSION_GRANTED;
+            if (audioOk) {
+                Toast.makeText(this, "✅ 麦克风权限已授予，可点「立即录音(测试)」", Toast.LENGTH_LONG).show();
+            } else {
+                setStatus("❌ 麦克风权限被拒绝。\n荣耀手机请点「去开启权限」→ 设置→权限→麦克风→允许，并关闭「麦克风隐私保护」。");
+                Toast.makeText(this, "权限被拒绝，请去设置手动开启", Toast.LENGTH_LONG).show();
+            }
+            updateStatus();
         }
     }
 
@@ -190,7 +262,7 @@ public class MainActivity extends AppCompatActivity {
         AlertDialog.Builder builder = new AlertDialog.Builder(this)
                 .setTitle(isNew ? "新增定时" : "编辑定时")
                 .setView(v)
-                .setPositiveButton("保存", null)   // 在 onShow 里设监听以做校验
+                .setPositiveButton("保存", null)
                 .setNegativeButton("取消", null);
         if (!isNew) {
             builder.setNeutralButton("删除", (dialog, which) -> {
