@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.recorder"
-    android:versionCode="1"
-    android:versionName="1.0" >
+    android:versionCode="4"
+    android:versionName="1.4" >
 
     <uses-sdk
         android:minSdkVersion="24"
@@ -10,6 +10,8 @@
 
     <!-- 录音 -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- 首次下载离线中文识别模型需要联网（之后完全离线） -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <!-- 前台服务（录音类型） -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
@@ -32,8 +34,9 @@
         android:allowBackup="true"
         android:appComponentFactory="androidx.core.app.CoreComponentFactory"
         android:debuggable="true"
-        android:extractNativeLibs="false"
+        android:extractNativeLibs="true"
         android:label="定时录音"
+        android:largeHeap="true"
         android:supportsRtl="true"
         android:theme="@style/Theme.Recorder" >
         <activity

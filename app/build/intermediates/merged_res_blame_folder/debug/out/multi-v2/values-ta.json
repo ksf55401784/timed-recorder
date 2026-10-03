@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.example.recorder.app-mergeDebugResources-29:/values-ta/values-ta.xml",
+            "outputFile": "com.example.recorder.app-mergeDebugResources-30:/values-ta/values-ta.xml",
             "map": [
                 {
                     "source": "/root/.gradle/caches/transforms-3/1269e761ba2b2764df14d796e474c793/transformed/appcompat-1.6.1/res/values-ta/values-ta.xml",

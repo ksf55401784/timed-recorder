@@ -2,6 +2,8 @@ package com.example.recorder;
 
 import android.Manifest;
 import android.content.BroadcastReceiver;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -15,6 +17,7 @@ import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.Switch;
@@ -50,6 +53,13 @@ public class MainActivity extends AppCompatActivity {
     private List<Schedule> schedules;
     private TextView statusText;
     private BroadcastReceiver statusReceiver;
+    private BroadcastReceiver transcriptReceiver;
+    private LinearLayout transcriptCard;
+    private TextView tvTranscriptStatus;
+    private TextView tvSummary;
+    private TextView tvPoints;
+    private TextView tvText;
+    private String lastText = "", lastSummary = "", lastPoints = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -75,10 +85,16 @@ public class MainActivity extends AppCompatActivity {
         Button battBtn = findViewById(R.id.battBtn);
         Button permBtn = findViewById(R.id.permBtn);
         Button bgBtn = findViewById(R.id.bgBtn);
+        transcriptCard = findViewById(R.id.transcriptCard);
+        tvTranscriptStatus = findViewById(R.id.tvTranscriptStatus);
+        tvSummary = findViewById(R.id.tvSummary);
+        tvPoints = findViewById(R.id.tvPoints);
+        tvText = findViewById(R.id.tvText);
         testBtn.setOnClickListener(v -> startTestRecord());
         battBtn.setOnClickListener(v -> openBatterySettings());
         permBtn.setOnClickListener(v -> openAppSettings());
         bgBtn.setOnClickListener(v -> openBgSettings());
+        findViewById(R.id.btnCopy).setOnClickListener(v -> copyResult());
 
         // 接收录音服务回传的实时状态（开始/失败原因/完成）
         statusReceiver = new BroadcastReceiver() {
@@ -91,6 +107,10 @@ public class MainActivity extends AppCompatActivity {
                 } else if ("DONE".equals(state)) {
                     setStatus("✅ 录音完成：" + (msg == null ? "" : msg)
                             + "\n文件在：内部存储/Android/data/com.example.recorder/files/recordings/");
+                    if (transcriptCard != null) {
+                        transcriptCard.setVisibility(View.VISIBLE);
+                        tvTranscriptStatus.setText("⏳ 正在识别文字并整理要点…（首次需联网下载约 40MB 中文模型，请保持联网）");
+                    }
                 } else if ("ERROR".equals(state)) {
                     setStatus("❌ 录音失败：" + (msg == null ? "未知原因" : msg)
                             + "\n请检查：① 设置→应用→定时录音→权限→麦克风→选「允许」；"
@@ -103,6 +123,36 @@ public class MainActivity extends AppCompatActivity {
                 new IntentFilter(RecorderService.ACTION_STATUS),
                 ContextCompat.RECEIVER_NOT_EXPORTED);
 
+        // 接收录音完成后的转写结果（文字稿/概要/要点）
+        transcriptReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                if (transcriptCard == null) return;
+                transcriptCard.setVisibility(View.VISIBLE);
+                String err = intent.getStringExtra(RecorderService.EXTRA_ERR);
+                String text = intent.getStringExtra(RecorderService.EXTRA_TEXT);
+                String summary = intent.getStringExtra(RecorderService.EXTRA_SUMMARY);
+                String points = intent.getStringExtra(RecorderService.EXTRA_POINTS);
+                if (err != null) {
+                    tvTranscriptStatus.setText("⚠️ 转写失败：" + err + "（录音文件已保留）");
+                    return;
+                }
+                if (text == null || text.trim().isEmpty()) {
+                    tvTranscriptStatus.setText("⚠️ 未识别到文字（可能环境太安静，或首次模型未下载完；录音文件已保留）");
+                    tvSummary.setText(""); tvPoints.setText(""); tvText.setText("");
+                    return;
+                }
+                tvTranscriptStatus.setText("✅ 已转写并整理（文字稿/概要/要点已保存为 recordings/ 同名 .txt）");
+                lastText = text; lastSummary = (summary == null ? "" : summary); lastPoints = (points == null ? "" : points);
+                tvSummary.setText(lastSummary);
+                tvPoints.setText(lastPoints);
+                tvText.setText(text);
+            }
+        };
+        ContextCompat.registerReceiver(this, transcriptReceiver,
+                new IntentFilter(RecorderService.ACTION_TRANSCRIPT),
+                ContextCompat.RECEIVER_NOT_EXPORTED);
+
         requestPerms();
         updateStatus();
     }
@@ -113,6 +163,21 @@ public class MainActivity extends AppCompatActivity {
         if (statusReceiver != null) {
             try { unregisterReceiver(statusReceiver); } catch (Exception ignore) {}
         }
+        if (transcriptReceiver != null) {
+            try { unregisterReceiver(transcriptReceiver); } catch (Exception ignore) {}
+        }
+    }
+
+    /** 复制 概要+要点+文字稿 到剪贴板 */
+    private void copyResult() {
+        if (lastText.isEmpty()) {
+            Toast.makeText(this, "暂无内容可复制", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        String s = "【概要】\n" + lastSummary + "\n\n【要点】\n" + lastPoints + "\n\n【文字稿】\n" + lastText;
+        ClipboardManager cm = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+        if (cm != null) cm.setPrimaryClip(ClipData.newPlainText("录音转写", s));
+        Toast.makeText(this, "已复制 文字稿+概要+要点", Toast.LENGTH_SHORT).show();
     }
 
     private void setStatus(String s) {

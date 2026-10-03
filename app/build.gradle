@@ -10,8 +10,8 @@ android {
         applicationId "com.example.recorder"
         minSdk 24
         targetSdk 34
-        versionCode 1
-        versionName "1.0"
+        versionCode 4
+        versionName "1.4"
     }
 
     buildTypes {
@@ -25,9 +25,17 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+
+    packagingOptions {
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
 }
 
 dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.11.0'
+    // 离线语音识别（Vosk，开源，无需 Google 服务，荣耀可用）
+    implementation 'com.alphacephei:vosk-android:0.3.47'
 }

@@ -1,103 +1,203 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="20dp">
-
-    <TextView
-        style="@style/TextAppearance.MaterialComponents.Headline6"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="🎙 定时录音"
-        android:textSize="22sp"
-        android:textStyle="bold" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:text="多组定时 · 锁屏也会准点录音"
-        android:textColor="#888" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:text="我的定时"
-        android:textColor="#aaa" />
-
-    <ListView
-        android:id="@+id/listView"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_marginTop="8dp"
-        android:layout_weight="1" />
+    android:layout_height="match_parent">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:orientation="horizontal">
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <TextView
+            style="@style/TextAppearance.MaterialComponents.Headline6"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🎙 定时录音"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="多组定时 · 锁屏也会准点录音 · 离线转文字"
+            android:textColor="#888" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="我的定时"
+            android:textColor="#aaa" />
+
+        <ListView
+            android:id="@+id/listView"
+            android:layout_width="match_parent"
+            android:layout_height="160dp"
+            android:layout_marginTop="8dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/testBtn"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:backgroundTint="#34a853"
+                android:text="🎤 立即录音(测试)" />
+
+            <Button
+                android:id="@+id/battBtn"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:backgroundTint="#f4b400"
+                android:text="🔋 忽略电池优化" />
+        </LinearLayout>
 
         <Button
-            android:id="@+id/testBtn"
-            android:layout_width="0dp"
+            android:id="@+id/permBtn"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="8dp"
-            android:layout_weight="1"
-            android:backgroundTint="#34a853"
-            android:text="🎤 立即录音(测试)" />
+            android:layout_marginTop="8dp"
+            android:backgroundTint="#9c27b0"
+            android:text="🔐 去开启权限（麦克风/通知）" />
 
         <Button
-            android:id="@+id/battBtn"
-            android:layout_width="0dp"
+            android:id="@+id/bgBtn"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:backgroundTint="#f4b400"
-            android:text="🔋 忽略电池优化" />
+            android:layout_marginTop="8dp"
+            android:backgroundTint="#ff5722"
+            android:text="🛡 荣耀后台白名单（锁屏必录关键）" />
+
+        <Button
+            android:id="@+id/addBtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:backgroundTint="#4f8cff"
+            android:text="＋ 新增定时" />
+
+        <TextView
+            android:id="@+id/statusText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:lineSpacingExtra="4dp"
+            android:textColor="#ccc"
+            android:textSize="12sp" />
+
+        <!-- 转写与要点卡片 -->
+        <LinearLayout
+            android:id="@+id/transcriptCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:background="#1c1c1c"
+            android:orientation="vertical"
+            android:padding="14dp"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="📝 转写与要点"
+                    android:textColor="#fff"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <Button
+                    android:id="@+id/btnCopy"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:backgroundTint="#4f8cff"
+                    android:paddingLeft="12dp"
+                    android:paddingRight="12dp"
+                    android:text="复制"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvTranscriptStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:textColor="#ffb74d"
+                android:textSize="12sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="概要"
+                android:textColor="#90caf9"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/tvSummary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:lineSpacingExtra="4dp"
+                android:textColor="#eee"
+                android:textSize="14sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="要点"
+                android:textColor="#90caf9"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/tvPoints"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:lineSpacingExtra="4dp"
+                android:textColor="#eee"
+                android:textSize="14sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="文字稿"
+                android:textColor="#90caf9"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/tvText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:lineSpacingExtra="4dp"
+                android:textColor="#ccc"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:lineSpacingExtra="4dp"
+            android:text="说明：录音与转写均在手机本地完成，不上传。首次转写需联网下载约 40MB 中文模型（仅一次）。文字稿/概要/要点会随录音一起保存在 recordings/ 目录（同名 .txt）。"
+            android:textColor="#888"
+            android:textSize="12sp" />
+
     </LinearLayout>
-
-    <Button
-        android:id="@+id/permBtn"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:backgroundTint="#9c27b0"
-        android:text="🔐 去开启权限（麦克风/通知）" />
-
-    <Button
-        android:id="@+id/bgBtn"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:backgroundTint="#ff5722"
-        android:text="🛡 荣耀后台白名单（锁屏必录关键）" />
-
-    <Button
-        android:id="@+id/addBtn"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:backgroundTint="#4f8cff"
-        android:text="＋ 新增定时" />
-
-    <TextView
-        android:id="@+id/statusText"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:lineSpacingExtra="4dp"
-        android:textColor="#ccc"
-        android:textSize="12sp" />
-
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:lineSpacingExtra="4dp"
-        android:text="说明：录音文件保存在 内部存储/Android/data/com.example.recorder/files/recordings/ 。支持每天 / 工作日 / 周末 三种重复；重启手机会自动恢复全部已启用的定时。首次请授予麦克风与通知权限。"
-        android:textColor="#888"
-        android:textSize="12sp" />
-
-</LinearLayout>
+</ScrollView>

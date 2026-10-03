@@ -11,6 +11,7 @@ drawable ic_mic
 id addBtn
 id battBtn
 id bgBtn
+id btnCopy
 id dlgDur
 id dlgEnable
 id dlgLabel
@@ -20,6 +21,11 @@ id listView
 id permBtn
 id statusText
 id testBtn
+id transcriptCard
+id tvPoints
+id tvSummary
+id tvText
+id tvTranscriptStatus
 layout activity_main
 layout dialog_schedule
 string app_name

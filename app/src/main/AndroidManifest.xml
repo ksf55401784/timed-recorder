@@ -3,6 +3,8 @@
 
     <!-- 录音 -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- 首次下载离线中文识别模型需要联网（之后完全离线） -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <!-- 前台服务（录音类型） -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
@@ -18,6 +20,8 @@
     <application
         android:allowBackup="true"
         android:label="定时录音"
+        android:largeHeap="true"
+        android:extractNativeLibs="true"
         android:supportsRtl="true"
         android:theme="@style/Theme.Recorder">
 
