@@ -75,7 +75,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:backgroundTint="#ff5722"
-            android:text="🛡 荣耀后台白名单（锁屏必录关键）" />
+            android:text="🛡 后台保活白名单（华为/荣耀锁屏必录）" />
 
         <Button
             android:id="@+id/addBtn"

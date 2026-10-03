@@ -10,8 +10,13 @@ android {
         applicationId "com.example.recorder"
         minSdk 24
         targetSdk 34
-        versionCode 4
-        versionName "1.4"
+        versionCode 5
+        versionName "1.5"
+
+        // 只打包手机常用架构，砍掉 x86/mips，减小体积（华为 nova2s 等老机下载更快）
+        ndk {
+            abiFilters 'armeabi-v7a', 'arm64-v8a'
+        }
     }
 
     buildTypes {
@@ -38,4 +43,12 @@ dependencies {
     implementation 'com.google.android.material:material:1.11.0'
     // 离线语音识别（Vosk，开源，无需 Google 服务，荣耀可用）
     implementation 'com.alphacephei:vosk-android:0.3.47'
+}
+
+// 关闭 debug 包的 native 库 strip：Vosk 预编译 so 本身已是 stripped，
+// 且老机型（华为 nova2s）兼容性更稳；同时规避 Gradle 8.x 对该任务的严格 output 校验。
+tasks.whenTaskAdded { task ->
+    if (task.name.contains('stripDebugDebugSymbols')) {
+        task.enabled = false
+    }
 }

@@ -114,7 +114,7 @@ public class MainActivity extends AppCompatActivity {
                 } else if ("ERROR".equals(state)) {
                     setStatus("❌ 录音失败：" + (msg == null ? "未知原因" : msg)
                             + "\n请检查：① 设置→应用→定时录音→权限→麦克风→选「允许」；"
-                            + "② 荣耀手机还需在 设置→隐私→权限管理 里给麦克风；"
+                            + "② 华为/荣耀手机还需在 设置→隐私→权限管理 里给麦克风；"
                             + "③ 关闭「麦克风隐私保护/应用锁」。");
                 }
             }
@@ -227,7 +227,7 @@ public class MainActivity extends AppCompatActivity {
         } else {
             sb.append("⚠️ 电池优化未关闭：点「忽略电池优化」并允许，否则闹钟可能不响！");
         }
-        sb.append("\n🛡 荣耀/华为：还要 设置→电池→应用启动管理→定时录音→关闭「自动管理」→开「自启动/后台活动」，否则锁屏不录（点下方橙色按钮直达）。");
+        sb.append("\n🛡 华为/荣耀：设置→电池→应用启动管理→定时录音→关闭「自动管理」→开「自启动/后台活动」，EMUI 8 还要 设置→电池→受保护应用→开启本应用，否则锁屏不录（点下方橙色按钮直达）。");
         // 仅在尚未显示录音结果时刷新（避免覆盖 STARTED/DONE 提示）
         if (statusText.getText() == null || statusText.getText().toString().startsWith("已启用")
                 || statusText.getText().toString().startsWith("当前没有")) {
@@ -263,6 +263,9 @@ public class MainActivity extends AppCompatActivity {
             Intent i = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
             i.setData(Uri.parse("package:" + getPackageName()));
             startActivity(i);
+            Toast.makeText(this,
+                    "若此页无法把本应用设为「不受限制」，请再点橙色「后台保活白名单」按钮走华为/荣耀系统管家。",
+                    Toast.LENGTH_LONG).show();
         } else {
             Toast.makeText(this, "当前系统无需此设置", Toast.LENGTH_SHORT).show();
         }
@@ -276,14 +279,74 @@ public class MainActivity extends AppCompatActivity {
         Toast.makeText(this, "请在设置→权限→麦克风→选择「允许」", Toast.LENGTH_LONG).show();
     }
 
-    /** 跳到本应用设置页并提示关闭荣耀「应用启动管理」自动管理（锁屏定时能录的关键） */
+    /**
+     * 锁屏定时能录的关键：把 App 加入厂商后台白名单。
+     * 华为/荣耀有自己独立的系统管家（电池优化、自启动、受保护应用），标准设置页关不掉，
+     * 必须直接跳到系统管家对应 Activity；其他品牌则跳系统应用设置页。
+     */
     private void openBgSettings() {
+        if (isHonor()) {
+            openVendorSettings("com.hihonor.systemmanager", new String[]{
+                    "com.hihonor.systemmanager/.startupmgr.ui.StartupNormalAppListActivity",
+                    "com.hihonor.systemmanager/.optimize.process.ProtectActivity"
+                },
+                "荣耀必做：设置→电池→应用启动管理→定时录音→关闭「自动管理」→打开「允许自启动 / 允许后台活动 / 允许关联启动」");
+        } else if (isHuawei()) {
+            openVendorSettings("com.huawei.systemmanager", new String[]{
+                    "com.huawei.systemmanager/.optimize.process.ProtectActivity",
+                    "com.huawei.systemmanager/.startupmgr.ui.StartupNormalAppListActivity"
+                },
+                "华为必做：①设置→电池→应用启动管理→定时录音→关闭「自动管理」→开「自启动 / 后台活动 / 关联启动」；"
+                        + "②EMUI 8 还要 设置→电池→受保护应用→把「定时录音」设为受保护。两步都做，否则锁屏不录。");
+        } else {
+            Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+            i.setData(Uri.parse("package:" + getPackageName()));
+            startActivity(i);
+            Toast.makeText(this,
+                    "请在本应用设置里允许「后台运行 / 自启动 / 电池不被优化」，否则锁屏后可能不录。",
+                    Toast.LENGTH_LONG).show();
+        }
+    }
+
+    /** 逐个尝试厂商系统管家的指定 Activity 直达（命中即停），全部失败则兜底到应用详情页 */
+    private void openVendorSettings(String pkg, String[] activities, String tip) {
+        for (String a : activities) {
+            try {
+                Intent i = new Intent();
+                if (a.contains("/")) {
+                    String[] parts = a.split("/", 2);
+                    i.setComponent(new android.content.ComponentName(parts[0], parts[1]));
+                } else {
+                    i.setPackage(a);
+                    i.setAction(Intent.ACTION_MAIN);
+                    i.addCategory(Intent.CATEGORY_LAUNCHER);
+                }
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(i);
+                Toast.makeText(this, tip, Toast.LENGTH_LONG).show();
+                return;
+            } catch (Exception ignore) {
+                // 该 Activity 在此 EMUI 版本不存在，尝试下一个候选
+            }
+        }
+        // 所有直达入口都失败：兜底到本应用设置页并给出通用提示
         Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
         i.setData(Uri.parse("package:" + getPackageName()));
         startActivity(i);
-        Toast.makeText(this,
-                "荣耀必做：设置→电池→应用启动管理→定时录音→关闭「自动管理」→打开「允许自启动 / 允许后台活动 / 允许关联启动」",
-                Toast.LENGTH_LONG).show();
+        Toast.makeText(this, tip, Toast.LENGTH_LONG).show();
+    }
+
+    private boolean isHuawei() {
+        String man = (Build.MANUFACTURER != null) ? Build.MANUFACTURER.toLowerCase() : "";
+        String brand = (Build.BRAND != null) ? Build.BRAND.toLowerCase() : "";
+        return man.contains("huawei") || brand.contains("huawei")
+                || brand.contains("hwin") || brand.contains("hw");
+    }
+
+    private boolean isHonor() {
+        String man = (Build.MANUFACTURER != null) ? Build.MANUFACTURER.toLowerCase() : "";
+        String brand = (Build.BRAND != null) ? Build.BRAND.toLowerCase() : "";
+        return man.contains("honor") || brand.contains("honor");
     }
 
     @Override
@@ -295,7 +358,7 @@ public class MainActivity extends AppCompatActivity {
             if (audioOk) {
                 Toast.makeText(this, "✅ 麦克风权限已授予，可点「立即录音(测试)」", Toast.LENGTH_LONG).show();
             } else {
-                setStatus("❌ 麦克风权限被拒绝。\n荣耀手机请点「去开启权限」→ 设置→权限→麦克风→允许，并关闭「麦克风隐私保护」。");
+                setStatus("❌ 麦克风权限被拒绝。\n华为/荣耀手机请点「去开启权限」→ 设置→权限→麦克风→允许，并关闭「麦克风隐私保护/应用锁」。");
                 Toast.makeText(this, "权限被拒绝，请去设置手动开启", Toast.LENGTH_LONG).show();
             }
             updateStatus();
